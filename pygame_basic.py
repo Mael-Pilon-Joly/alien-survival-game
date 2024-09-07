@@ -23,7 +23,7 @@ arm_angle = 0
 arm_swing_direction = 1  # 1 for swinging forward, -1 for swinging backward
 
 # Movement speed
-move_speed = 2
+move_speed = 4
 
 # Direction (1 for right, -1 for left)
 direction = 1
@@ -46,14 +46,42 @@ arm_image = pygame.transform.scale(arm_image, (arm_image.get_width() // 2, arm_i
 
 
 # Create the grid and populate it with random tiles
-grid = []
-for row in range(GRID_ROWS):
-    grid_row = []
-    for col in range(GRID_COLS):
-        # Randomly choose between 0 (plain moon), 1 (water pond), 2 (grass)
-        tile_type = random.choice([0]*8 + [1] + [2]*2)
-        grid_row.append(tile_type)
-    grid.append(grid_row)
+def generate_lake_cluster(grid, start_row, start_col, size):
+    """Generate a lake cluster starting from a given tile."""
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
+    lake_tiles = [(start_row, start_col)]
+    grid[start_row][start_col] = 1  # 1 for water
+
+    for _ in range(size - 1):
+        # Choose a random existing lake tile
+        r, c = random.choice(lake_tiles)
+
+        # Try to expand the lake to an adjacent tile
+        possible_directions = random.sample(directions, len(directions))  # Shuffle directions
+        for dr, dc in possible_directions:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < len(grid) and 0 <= nc < len(grid[0]) and grid[nr][nc] != 1:
+                grid[nr][nc] = 1
+                lake_tiles.append((nr, nc))
+                break
+
+def generate_grid_with_lake_and_grass(rows, cols, lake_size):
+    grid = [[0] * cols for _ in range(rows)]  # Start with all plain ground
+    start_row, start_col = random.randint(0, rows - 1), random.randint(0, cols - 1)
+    generate_lake_cluster(grid, start_row, start_col, lake_size)
+
+    # Fill the rest with grass randomly
+    for row in range(rows):
+        for col in range(cols):
+            if grid[row][col] == 0:  # Only replace plain ground
+                grid[row][col] = random.choice([0, 2])  # 0 for ground, 2 for grass
+
+    return grid
+
+# Example usage
+grid = generate_grid_with_lake_and_grass(10, 10, lake_size=8)
+
+grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
 
 def transpose_grid(grid):
     return [[grid[j][i] for j in range(len(grid))] for i in range(len(grid[0]))]
@@ -98,6 +126,7 @@ while running:
     
 
     """ Note X and Y axis are inversed, so we use inversed_grid"""
+    out_of_bound = False
     # Horizontal movement
     if keys[pygame.K_LEFT]:
 
@@ -106,16 +135,25 @@ while running:
         adj_y = y_pos + TILE_SIZE
 
         if(adj_x) % TILE_SIZE == 0:
+          if (adj_x / TILE_SIZE < 0):
+           adj_x = 9 * TILE_SIZE
+           grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+           inverse_grid = transpose_grid(grid)
+           out_of_bound = True
           print("modulo x")
           print(adj_x,adj_y)
           print(int(adj_x/TILE_SIZE),int(math.floor(adj_y/TILE_SIZE)))
           print(inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))])
  
           if inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))]== 0 or inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))] == 2:
-            x_pos -= move_speed
+            if out_of_bound:
+              x_pos = 9* TILE_SIZE;
+              out_of_bound = False
+            else:
+              x_pos -= move_speed
         else:
             x_pos -= move_speed
-        direction = -1
+        direction = 1
         moving = True
 
 
@@ -127,13 +165,23 @@ while running:
 
 
         if (adj_x) % TILE_SIZE == 0:
+          if (adj_x / TILE_SIZE >= 10):
+              adj_x = 0
+              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+              inverse_grid = transpose_grid(grid)
+              out_of_bound = True
+
           print("modulo x")
           print(adj_x, adj_y)
           print(int(adj_x/TILE_SIZE),int(math.floor(adj_y/TILE_SIZE)))
           print(inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))])
 
           if inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))]== 0 or inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))] == 2:
-            x_pos += move_speed
+            if out_of_bound:
+              x_pos = 0;
+              out_of_bound = False
+            else:
+              x_pos += move_speed
         else:
             x_pos += move_speed
         direction = 1
@@ -148,15 +196,26 @@ while running:
         adj_y = new_y_pos + TILE_SIZE
 
         if (adj_y % TILE_SIZE)== 0:
+          if (adj_y / TILE_SIZE < 0):
+              adj_y = 9
+              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+              inverse_grid = transpose_grid(grid)
+              out_of_bound = True
+
           print("modulo y")
           print(adj_x,adj_y)
           print(int(math.floor(adj_x/TILE_SIZE)), int(adj_y/TILE_SIZE))
           print(inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1])
           print(inverse_grid)
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1] == 2:
-            y_pos -= move_speed
+            if out_of_bound:
+              y_pos = 9* TILE_SIZE;
+              out_of_bound = False
+            else:
+              y_pos -= move_speed
         else:
             y_pos -= move_speed
+        direction = 1
         moving = True
 
 
@@ -166,16 +225,27 @@ while running:
         adj_x = x_pos + TILE_SIZE/2
         adj_y = new_y_pos + TILE_SIZE
         if (adj_y % TILE_SIZE) == 0:
+          if (adj_y / TILE_SIZE >= 10):
+              adj_y = 0
+              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+              inverse_grid = transpose_grid(grid)
+              out_of_bound = True
          
           print("modulo y")
           print(adj_x, adj_y)
           print(int(math.floor(adj_x/TILE_SIZE)), int(adj_y/TILE_SIZE))
 
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 2:
-            y_pos += move_speed
+            if out_of_bound:
+              y_pos = 0;
+              out_of_bound = False
+            else:
+              y_pos += move_speed
         else:
             y_pos += move_speed
+        direction = 1
         moving = True
+
 
     # Arm swinging back and forth, only if moving horizontally
     if moving:
