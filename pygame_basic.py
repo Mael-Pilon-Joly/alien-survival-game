@@ -3,11 +3,14 @@ import pygame
 import time
 import sys
 import math
+from intro import intro_screen
+from ship import draw_boundary, draw_ship
 
 pygame.init()
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
+
 # Set up display
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Random Map Grid')
@@ -21,13 +24,14 @@ class GameState:
         self.hunger = 100
         self.thirst = 100
         self.oxygen = 100
+        self.game_over = False
 
 # Create game state
 state = GameState()
 
 # Font for displaying stats
 font = pygame.font.Font(None, 36)
-
+game_over_font = pygame.font.Font(None, 72)
 
 # Time management variables
 game_minutes_passed = 0  # Define this outside the function
@@ -48,13 +52,31 @@ def update_resources(state):
             state.hunger -= 5
             state.thirst -= 7
             state.oxygen -= 3
+        
+        if state.hunger == 0:
+            state.health -= 10
+
+        if state.thirst == 0:
+            state.health -= 20
+
+        if state.oxygen == 0:
+            state.health -=100
+
+        if state.health == 0:
+            state.game_over = True
 
             # Ensure values don't go below zero
             state.hunger = max(state.hunger, 0)
             state.thirst = max(state.thirst, 0)
             state.oxygen = max(state.oxygen, 0)
+            state.health = max(state.health, 0)
+
+
 
 def draw_stats(screen, state, font):
+    if state.game_over:
+        return
+    
     # Display the current in-game time and resource stats in a square in the bottom right
     health_text = font.render(f'Health: {int(state.health)}', True, (255, 0, 0))
     hunger_text = font.render(f'Hunger: {int(state.hunger)}', True, (0, 255, 0))
@@ -78,6 +100,12 @@ def draw_stats(screen, state, font):
     # Display the time in the upper right corner
     screen.blit(time_text, (screen.get_width() - time_text.get_width() - 10, 10))
 
+def display_game_over(screen):
+    screen.fill((0, 0, 0))  # Black background
+    game_over_text = game_over_font.render("GAME OVER", True, (255, 0, 0))
+    screen.blit(game_over_text, (screen.get_width() // 2 - game_over_text.get_width() // 2, screen.get_height() // 2 - game_over_text.get_height() // 2))
+    pygame.display.flip()
+
 
 # Define grid size
 GRID_ROWS = 10
@@ -85,6 +113,9 @@ GRID_COLS = 10
 TILE_SIZE = 64 
 x_pos = 0
 y_pos = 0
+
+currentXArea = 0
+currentYArea = 0
 
 # Arm swing settings
 arm_angle = 0
@@ -184,7 +215,11 @@ def draw_grid_overlay(screen, rows, cols, tile_size):
 
 # Main game loop
 running = True
+intro = True
 while running:
+    if (intro):
+      intro_screen(screen)
+      intro = False
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -205,8 +240,9 @@ while running:
         if(adj_x) % TILE_SIZE == 0:
           if (adj_x / TILE_SIZE < 0):
            adj_x = 9 * TILE_SIZE
-           grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
-           inverse_grid = transpose_grid(grid)
+           if currentXArea > -4:
+              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+              inverse_grid = transpose_grid(grid)
            out_of_bound = True
           print("modulo x")
           print(adj_x,adj_y)
@@ -215,13 +251,15 @@ while running:
  
           if inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))]== 0 or inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))] == 2:
             if out_of_bound:
-              x_pos = 9* TILE_SIZE;
+              if currentXArea >-4:
+                x_pos = 9* TILE_SIZE;
+                currentXArea -= 1
               out_of_bound = False
             else:
               x_pos -= move_speed
         else:
             x_pos -= move_speed
-        direction = 1
+        direction = -1
         moving = True
 
 
@@ -235,8 +273,9 @@ while running:
         if (adj_x) % TILE_SIZE == 0:
           if (adj_x / TILE_SIZE >= 10):
               adj_x = 0
-              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
-              inverse_grid = transpose_grid(grid)
+              if currentXArea < 4:
+                grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                inverse_grid = transpose_grid(grid)
               out_of_bound = True
 
           print("modulo x")
@@ -246,7 +285,9 @@ while running:
 
           if inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))]== 0 or inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))] == 2:
             if out_of_bound:
-              x_pos = 0;
+              if currentXArea < 4:
+                x_pos = 0;
+                currentXArea += 1
               out_of_bound = False
             else:
               x_pos += move_speed
@@ -278,6 +319,7 @@ while running:
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1] == 2:
             if out_of_bound:
               y_pos = 9* TILE_SIZE;
+              currentYArea -= 1
               out_of_bound = False
             else:
               y_pos -= move_speed
@@ -306,6 +348,7 @@ while running:
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 2:
             if out_of_bound:
               y_pos = 0;
+              currentYArea += 5
               out_of_bound = False
             else:
               y_pos += move_speed
@@ -325,37 +368,48 @@ while running:
 
     # Clear the screen
     screen.fill((0, 0, 0))
-    # Draw the grid
-    draw_grid(screen, grid)
-    draw_grid_overlay(screen, GRID_ROWS, GRID_COLS, TILE_SIZE)
+    if not state.game_over:
+        # Draw the grid
+        draw_grid(screen, grid)
+        draw_grid_overlay(screen, GRID_ROWS, GRID_COLS, TILE_SIZE)
 
 
-    # Flip images based on direction
-    if direction == 1:
-        head = head_image
-        body = body_image
-        arm = pygame.transform.rotate(arm_image, arm_angle)
+        # Flip images based on direction
+        if direction == 1:
+            head = head_image
+            body = body_image
+            arm = pygame.transform.rotate(arm_image, arm_angle)
+        else:
+            head = pygame.transform.flip(head_image, True, False)
+            body = pygame.transform.flip(body_image, True, False)
+            arm = pygame.transform.flip(pygame.transform.rotate(arm_image, arm_angle), True, False)
+
+        # Draw the body first, then the head and arm on top
+        screen.blit(body, (x_pos, y_pos))
+        screen.blit(head, (x_pos + 10, y_pos - 20))  # Adjust head position as needed
+        screen.blit(arm, (x_pos + 13, y_pos +12))  # Adjust arm position as needed
+
+        # Frame rate
+        pygame.time.Clock().tick(30)
+
+        #elapsed_time = clock.get_time() / 1000.0  # Get elapsed time in seconds
+        elapsed_time = clock.get_time() / 1000.0  # Get elapsed time in seconds
+        update_resources(state)
+
+         # Draw the boundary if at the edge of the world
+        draw_boundary(screen, currentXArea, currentYArea)
+        
+        # Draw the resource stats
+        draw_stats(screen, state, font)
+
+         # Draw the ship if in (0,0)
+        draw_ship(screen, currentXArea, currentYArea)
+
+
+        # Update the display
+        pygame.display.flip()
     else:
-        head = pygame.transform.flip(head_image, True, False)
-        body = pygame.transform.flip(body_image, True, False)
-        arm = pygame.transform.flip(pygame.transform.rotate(arm_image, arm_angle), True, False)
+        display_game_over(screen)
 
-    # Draw the body first, then the head and arm on top
-    screen.blit(body, (x_pos, y_pos))
-    screen.blit(head, (x_pos + 10, y_pos - 20))  # Adjust head position as needed
-    screen.blit(arm, (x_pos + 13, y_pos +12))  # Adjust arm position as needed
-
-    # Frame rate
-    pygame.time.Clock().tick(30)
-
-    #elapsed_time = clock.get_time() / 1000.0  # Get elapsed time in seconds
-    elapsed_time = clock.get_time() / 1000.0  # Get elapsed time in seconds
-    update_resources(state)
-    
-    # Draw the resource stats
-    draw_stats(screen, state, font)
-
-    # Update the display
-    pygame.display.flip()
 
 pygame.quit()
