@@ -16,4 +16,29 @@ Galactic Explorer: Alien Planet Survival
         Varied Gameplay: The combination of exploration, combat, resource management, and puzzles offers varied gameplay that can keep players engaged.
         Challenge: Balancing survival elements with the need to progress by repairing the spaceship provides a continuous challenge.
 
-This game idea allows you to explore different mechanics while working within the constraints of Pygame, making it a fun and rewarding project for a first game.
+Basic Version (4-6 weeks)
+Week 1-2:
+
+Setup & Basic Mechanics: Set up the game environment, including player movement and basic map design. Implement simple alien creatures and basic collision detection.
+Resource Management: Introduce basic resource management (e.g., oxygen levels, health).
+Week 3-4:
+
+Exploration & Combat: Develop the exploration aspect, with a few distinct areas to explore. Implement basic combat mechanics with simple alien AI.
+Spaceship Repair Mechanics: Start working on the spaceship repair objectives, including gathering parts.
+Week 5:
+
+Day-Night Cycle & Advanced Mechanics: Add the day-night cycle and any additional features like more advanced alien AI or puzzle elements.
+UI & Feedback: Implement basic UI elements (inventory, health, oxygen levels) and provide feedback to the player (e.g., alerts when oxygen is low).
+Week 6:
+
+Polish & Testing: Refine the game by fixing bugs, balancing gameplay, and optimizing performance. Conduct playtesting to ensure the game is fun and challenging.
+
+Ideas:
+
+- hunger, thirst, oxygen, health
+
+- hunger = cook alien (with fire at ship) + 50% hunger
+- thirst = cook water (with fire at ship) or water bottle + 20% thirst
+- oxygen = oxygen tank + 50% oxygen
+- health = sleep (+10%/hour), health package (+25%) and eating(+20%)
+

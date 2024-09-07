@@ -1,5 +1,6 @@
 import random
 import pygame
+import time
 import sys
 import math
 
@@ -10,6 +11,73 @@ SCREEN_HEIGHT = 600
 # Set up display
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption('Random Map Grid')
+
+# Define clock for controlling the frame rate
+clock = pygame.time.Clock()
+# Create game state
+class GameState:
+    def __init__(self):
+        self.health = 100
+        self.hunger = 100
+        self.thirst = 100
+        self.oxygen = 100
+
+# Create game state
+state = GameState()
+
+# Font for displaying stats
+font = pygame.font.Font(None, 36)
+
+
+# Time management variables
+game_minutes_passed = 0  # Define this outside the function
+last_update_time = time.time()  
+
+def update_resources(state):
+    global game_minutes_passed, last_update_time
+    current_time = time.time()
+    
+    # Check if a real second has passed
+    if current_time - last_update_time >= 1:
+        # Increase in-game time by 1 minute
+        game_minutes_passed += 1
+        last_update_time = current_time
+
+        # Deplete resources every in-game hour
+        if game_minutes_passed % 60 == 0:  # Every 60 minutes, i.e., 1 in-game hour
+            state.hunger -= 5
+            state.thirst -= 7
+            state.oxygen -= 3
+
+            # Ensure values don't go below zero
+            state.hunger = max(state.hunger, 0)
+            state.thirst = max(state.thirst, 0)
+            state.oxygen = max(state.oxygen, 0)
+
+def draw_stats(screen, state, font):
+    # Display the current in-game time and resource stats in a square in the bottom right
+    health_text = font.render(f'Health: {int(state.health)}', True, (255, 0, 0))
+    hunger_text = font.render(f'Hunger: {int(state.hunger)}', True, (0, 255, 0))
+    thirst_text = font.render(f'Thirst: {int(state.thirst)}', True, (0, 0, 255))
+    oxygen_text = font.render(f'Oxygen: {int(state.oxygen)}', True, (255, 255, 0))
+
+    pygame.draw.rect(screen, (50, 50, 50), (600, 450, 200, 150))  # Background square
+    screen.blit(health_text, (610, 460))
+    screen.blit(hunger_text, (610, 490))
+    screen.blit(thirst_text, (610, 520))
+    screen.blit(oxygen_text, (610, 550))
+
+    # Calculate the in-game time in hours and minutes
+    hours = game_minutes_passed // 60
+    minutes = game_minutes_passed % 60
+    time_text = font.render(f'Time: {hours:02}:{minutes:02}', True, (255, 255, 255))
+    
+    # Display the time in the upper right corner
+    screen.blit(time_text, (screen.get_width() - time_text.get_width() - 10, 10))
+    
+    # Display the time in the upper right corner
+    screen.blit(time_text, (screen.get_width() - time_text.get_width() - 10, 10))
+
 
 # Define grid size
 GRID_ROWS = 10
@@ -280,6 +348,12 @@ while running:
     # Frame rate
     pygame.time.Clock().tick(30)
 
+    #elapsed_time = clock.get_time() / 1000.0  # Get elapsed time in seconds
+    elapsed_time = clock.get_time() / 1000.0  # Get elapsed time in seconds
+    update_resources(state)
+    
+    # Draw the resource stats
+    draw_stats(screen, state, font)
 
     # Update the display
     pygame.display.flip()
