@@ -5,6 +5,7 @@ import sys
 import math
 from intro import intro_screen
 from ship import draw_boundary, draw_ship
+from resources import generate_objects, interact_with_object, display_inventory, WaterState
 
 pygame.init()
 
@@ -26,8 +27,15 @@ class GameState:
         self.oxygen = 100
         self.game_over = False
 
+class Inventory:
+    def __init__(self):
+        self.wood = 0
+        self.oxygen_tank = 1
+        self.water = WaterState.EMPTY
+
 # Create game state
 state = GameState()
+inventory = Inventory()
 
 # Font for displaying stats
 font = pygame.font.Font(None, 36)
@@ -178,9 +186,9 @@ def generate_grid_with_lake_and_grass(rows, cols, lake_size):
     return grid
 
 # Example usage
-grid = generate_grid_with_lake_and_grass(10, 10, lake_size=8)
-
 grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+objects = generate_objects(GRID_COLS)
+print(objects)
 
 def transpose_grid(grid):
     return [[grid[j][i] for j in range(len(grid))] for i in range(len(grid[0]))]
@@ -216,6 +224,8 @@ def draw_grid_overlay(screen, rows, cols, tile_size):
 # Main game loop
 running = True
 intro = True
+
+
 while running:
     if (intro):
       intro_screen(screen)
@@ -241,7 +251,9 @@ while running:
           if (adj_x / TILE_SIZE < 0):
            adj_x = 9 * TILE_SIZE
            if currentXArea > -4:
-              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)  
+              objects = generate_objects(GRID_COLS)
+              print(objects)
               inverse_grid = transpose_grid(grid)
            out_of_bound = True
           print("modulo x")
@@ -275,6 +287,8 @@ while running:
               adj_x = 0
               if currentXArea < 4:
                 grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                objects = generate_objects(GRID_COLS)
+                print(objects)
                 inverse_grid = transpose_grid(grid)
               out_of_bound = True
 
@@ -307,8 +321,11 @@ while running:
         if (adj_y % TILE_SIZE)== 0:
           if (adj_y / TILE_SIZE < 0):
               adj_y = 9
-              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
-              inverse_grid = transpose_grid(grid)
+              if currentYArea > -4:
+                grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                objects = generate_objects(GRID_COLS)
+                print(objects)
+                inverse_grid = transpose_grid(grid)
               out_of_bound = True
 
           print("modulo y")
@@ -318,8 +335,10 @@ while running:
           print(inverse_grid)
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)-1] == 2:
             if out_of_bound:
-              y_pos = 9* TILE_SIZE;
-              currentYArea -= 1
+              if currentYArea > -4:
+                y_pos = 9* TILE_SIZE;
+                print("currentYArea:",currentYArea)
+                currentYArea -= 1
               out_of_bound = False
             else:
               y_pos -= move_speed
@@ -337,8 +356,11 @@ while running:
         if (adj_y % TILE_SIZE) == 0:
           if (adj_y / TILE_SIZE >= 10):
               adj_y = 0
-              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
-              inverse_grid = transpose_grid(grid)
+              if currentYArea < 4:
+                grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                objects = generate_objects(GRID_COLS)
+                print(objects)
+                inverse_grid = transpose_grid(grid)
               out_of_bound = True
          
           print("modulo y")
@@ -347,8 +369,9 @@ while running:
 
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 2:
             if out_of_bound:
-              y_pos = 0;
-              currentYArea += 5
+              if currentYArea<4:
+                y_pos = 0;
+                currentYArea += 1
               out_of_bound = False
             else:
               y_pos += move_speed
@@ -385,7 +408,7 @@ while running:
             arm = pygame.transform.flip(pygame.transform.rotate(arm_image, arm_angle), True, False)
 
         # Draw the body first, then the head and arm on top
-        screen.blit(body, (x_pos, y_pos))
+        character_rect = screen.blit(body, (x_pos, y_pos))
         screen.blit(head, (x_pos + 10, y_pos - 20))  # Adjust head position as needed
         screen.blit(arm, (x_pos + 13, y_pos +12))  # Adjust arm position as needed
 
@@ -405,6 +428,15 @@ while running:
          # Draw the ship if in (0,0)
         draw_ship(screen, currentXArea, currentYArea)
 
+        for obj in objects:
+            if not obj["collected"] and not obj["defeated"]:
+                screen.blit(obj["image"], obj["pos"])
+
+        if keys[pygame.K_SPACE]:
+            interact_with_object(character_rect, objects, inventory)
+        
+        if keys[pygame.K_i]:
+           display_inventory(screen, inventory, keys, state)
 
         # Update the display
         pygame.display.flip()

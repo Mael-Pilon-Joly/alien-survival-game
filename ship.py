@@ -29,8 +29,8 @@ def draw_boundary(screen, currentXArea, currentYArea):
 
     # Bottom border
     if currentYArea == 4:
-        screen.blit(border_image, (0, screen_height - 150))
+        screen.blit(border_image, (0, screen_height - 10))
     
     # Top border
     if currentYArea == -4:
-        screen.blit(border_image, (0, -screen_height + 150))
+        screen.blit(border_image, (0, -screen_height + 10))
