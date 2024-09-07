@@ -8,6 +8,7 @@ from ship import draw_boundary, draw_ship, interact_with_ship, Ship
 from resources import generate_objects, interact_with_object, interact_with_lake, display_inventory, WaterState, fill_bottle_with_radiated_water
 from utils import display_message
 from grid_generator import generate_grid_with_lake_and_grass, generate_aliens, generate_aliens_attacks
+from player_attack import character_attack
 
 pygame.init()
 
@@ -409,14 +410,17 @@ while running:
         generate_aliens_attacks(screen, x_pos, y_pos, body, state, aliens)
 
         if keys[pygame.K_SPACE]:
+            character_attack(screen, character_rect, aliens, 10)
             interact_with_object(character_rect, objects, inventory)
             lake_message = interact_with_lake(character_rect, lakes, inventory)
             print(lake_message)
             if lake_message:
                display_message(screen, lake_message)
-            message= interact_with_ship(character_rect, ship, inventory, state, screen)
-            if (message):
-               display_message(screen, message)
+            if ship.rect:
+               message= interact_with_ship(character_rect, ship, inventory, state, screen)
+               if (message):
+                 display_message(screen, message)
+            
         
         if keys[pygame.K_i]:
           display_inventory(screen, inventory, keys, state)

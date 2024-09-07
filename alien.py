@@ -41,6 +41,11 @@ class Alien:
             print(f"Alien attacks for {self.attack_power} damage!")
             self.last_attack_time = current_time  
 
+            if target.health <= 0:
+              target.health = 0  # Make sure health doesn't go negative
+              target.game_over = True  # Set the game over flag
+              print("Player health is 0. Game Over!")
+
     def draw(self, screen):
         """Draw the alien on the screen."""
         screen.blit(self.image, self.rect.topleft)
@@ -80,7 +85,7 @@ class BigAlien(Alien):
 
 class RareAlien(Alien):
     def __init__(self):
-        super().__init__(health=200, attack_power=33, image=black_alien_img, size=90, speed=1, is_hostile=True)
+        super().__init__(health=200, attack_power=33, image=black_alien_img, size=90, speed=1.5, is_hostile=True)
         self.meat_chance = 0.2
         self.material_chance = 1.0
 
