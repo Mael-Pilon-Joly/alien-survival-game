@@ -60,6 +60,22 @@ def interact_with_object(character_rect, objects, inventory):
                     obj["defeated"] = True
                     print("Defeated alien!")
 
+def interact_with_lake(character_rect, lakes, inventory):
+    for lake in lakes:
+        print(lake.tiles)
+        for tile in lake.tiles:
+            lake_rect = pygame.Rect(tile[1] * TILE_SIZE, tile[0] * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+            print(character_rect, lake_rect)
+            if check_collision(character_rect, lake_rect):
+               if inventory.water == WaterState.EMPTY:
+                  inventory.water = WaterState.RADIATED
+                  return("Filling bottle with radiated water.")
+               else:
+                  return("Your bottle is already filled.")
+            
+    return None
+          
+
 def display_inventory(screen, inventory, keys, state ):
     # New panel, slightly lighter color, positioned just above the original panel
     inventory_open = True

@@ -4,8 +4,10 @@ import time
 import sys
 import math
 from intro import intro_screen
-from ship import draw_boundary, draw_ship
-from resources import generate_objects, interact_with_object, display_inventory, WaterState
+from ship import draw_boundary, draw_ship, interact_with_ship, Ship
+from resources import generate_objects, interact_with_object, interact_with_lake, display_inventory, WaterState, fill_bottle_with_radiated_water
+from utils import display_message
+from grid_generator import generate_grid_with_lake_and_grass, generate_aliens, generate_aliens_attacks
 
 pygame.init()
 
@@ -32,10 +34,13 @@ class Inventory:
         self.wood = 0
         self.oxygen_tank = 1
         self.water = WaterState.EMPTY
+        self.material = 0
+        self.meat = 0
 
 # Create game state
 state = GameState()
 inventory = Inventory()
+ship = Ship()
 
 # Font for displaying stats
 font = pygame.font.Font(None, 36)
@@ -121,6 +126,7 @@ GRID_COLS = 10
 TILE_SIZE = 64 
 x_pos = 0
 y_pos = 0
+aliens = []
 
 currentXArea = 0
 currentYArea = 0
@@ -151,42 +157,7 @@ arm_image = pygame.image.load('./assets/astronaut_arm.png').convert_alpha()
 head_image = pygame.transform.scale(head_image, (head_image.get_width() // 2, head_image.get_height() // 2))
 arm_image = pygame.transform.scale(arm_image, (arm_image.get_width() // 2, arm_image.get_height() // 4))
 
-
-# Create the grid and populate it with random tiles
-def generate_lake_cluster(grid, start_row, start_col, size):
-    """Generate a lake cluster starting from a given tile."""
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]  # Up, Down, Left, Right
-    lake_tiles = [(start_row, start_col)]
-    grid[start_row][start_col] = 1  # 1 for water
-
-    for _ in range(size - 1):
-        # Choose a random existing lake tile
-        r, c = random.choice(lake_tiles)
-
-        # Try to expand the lake to an adjacent tile
-        possible_directions = random.sample(directions, len(directions))  # Shuffle directions
-        for dr, dc in possible_directions:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < len(grid) and 0 <= nc < len(grid[0]) and grid[nr][nc] != 1:
-                grid[nr][nc] = 1
-                lake_tiles.append((nr, nc))
-                break
-
-def generate_grid_with_lake_and_grass(rows, cols, lake_size):
-    grid = [[0] * cols for _ in range(rows)]  # Start with all plain ground
-    start_row, start_col = random.randint(0, rows - 1), random.randint(0, cols - 1)
-    generate_lake_cluster(grid, start_row, start_col, lake_size)
-
-    # Fill the rest with grass randomly
-    for row in range(rows):
-        for col in range(cols):
-            if grid[row][col] == 0:  # Only replace plain ground
-                grid[row][col] = random.choice([0, 2])  # 0 for ground, 2 for grass
-
-    return grid
-
-# Example usage
-grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+grid, lakes = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
 objects = generate_objects(GRID_COLS)
 print(objects)
 
@@ -194,7 +165,6 @@ def transpose_grid(grid):
     return [[grid[j][i] for j in range(len(grid))] for i in range(len(grid[0]))]
 
 inverse_grid = transpose_grid(grid)
-
 
 # Function to draw the grid
 def draw_grid(screen, grid):
@@ -251,7 +221,7 @@ while running:
           if (adj_x / TILE_SIZE < 0):
            adj_x = 9 * TILE_SIZE
            if currentXArea > -4:
-              grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)  
+              grid, lakes = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)  
               objects = generate_objects(GRID_COLS)
               print(objects)
               inverse_grid = transpose_grid(grid)
@@ -264,6 +234,7 @@ while running:
           if inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))]== 0 or inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))] == 2:
             if out_of_bound:
               if currentXArea >-4:
+                aliens = generate_aliens()
                 x_pos = 9* TILE_SIZE;
                 currentXArea -= 1
               out_of_bound = False
@@ -286,7 +257,7 @@ while running:
           if (adj_x / TILE_SIZE >= 10):
               adj_x = 0
               if currentXArea < 4:
-                grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                grid, lakes = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
                 objects = generate_objects(GRID_COLS)
                 print(objects)
                 inverse_grid = transpose_grid(grid)
@@ -300,6 +271,7 @@ while running:
           if inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))]== 0 or inverse_grid[int(adj_x/TILE_SIZE)][int(math.floor(adj_y/TILE_SIZE))] == 2:
             if out_of_bound:
               if currentXArea < 4:
+                aliens = generate_aliens()
                 x_pos = 0;
                 currentXArea += 1
               out_of_bound = False
@@ -322,7 +294,7 @@ while running:
           if (adj_y / TILE_SIZE < 0):
               adj_y = 9
               if currentYArea > -4:
-                grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                grid, lakes = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
                 objects = generate_objects(GRID_COLS)
                 print(objects)
                 inverse_grid = transpose_grid(grid)
@@ -337,6 +309,7 @@ while running:
             if out_of_bound:
               if currentYArea > -4:
                 y_pos = 9* TILE_SIZE;
+                aliens = generate_aliens()
                 print("currentYArea:",currentYArea)
                 currentYArea -= 1
               out_of_bound = False
@@ -357,7 +330,7 @@ while running:
           if (adj_y / TILE_SIZE >= 10):
               adj_y = 0
               if currentYArea < 4:
-                grid = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
+                grid, lakes = generate_grid_with_lake_and_grass(GRID_ROWS, GRID_COLS, lake_size=8)
                 objects = generate_objects(GRID_COLS)
                 print(objects)
                 inverse_grid = transpose_grid(grid)
@@ -370,6 +343,7 @@ while running:
           if inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 0 or inverse_grid[int(math.floor(adj_x/TILE_SIZE))][int(adj_y/TILE_SIZE)] == 2:
             if out_of_bound:
               if currentYArea<4:
+                aliens = generate_aliens()
                 y_pos = 0;
                 currentYArea += 1
               out_of_bound = False
@@ -426,17 +400,26 @@ while running:
         draw_stats(screen, state, font)
 
          # Draw the ship if in (0,0)
-        draw_ship(screen, currentXArea, currentYArea)
+        ship.rect  = draw_ship(screen, currentXArea, currentYArea)
 
         for obj in objects:
             if not obj["collected"] and not obj["defeated"]:
                 screen.blit(obj["image"], obj["pos"])
 
+        generate_aliens_attacks(screen, x_pos, y_pos, body, state, aliens)
+
         if keys[pygame.K_SPACE]:
             interact_with_object(character_rect, objects, inventory)
+            lake_message = interact_with_lake(character_rect, lakes, inventory)
+            print(lake_message)
+            if lake_message:
+               display_message(screen, lake_message)
+            message= interact_with_ship(character_rect, ship, inventory, state, screen)
+            if (message):
+               display_message(screen, message)
         
         if keys[pygame.K_i]:
-           display_inventory(screen, inventory, keys, state)
+          display_inventory(screen, inventory, keys, state)
 
         # Update the display
         pygame.display.flip()
